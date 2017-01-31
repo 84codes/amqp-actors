@@ -12,10 +12,10 @@ module AmqpActors
     end
 
     module ClassMethods
-      attr_accessor :inbox, :act_block, :thread_count, :running
+      attr_accessor :inbox, :act_block, :nr_of_threads, :running
 
       def inherited(subclass)
-        subclass.inbox = System.backend.queue(subclass, thread_count)
+        subclass.nr_of_threads = 1
         System.add(subclass)
       end
 
@@ -28,23 +28,23 @@ module AmqpActors
         unless valid_types?(msg)
           raise ArgumentError, "Illegal message type, expected #{@message_type}"
         end
-        @inbox.push msg unless @inbox.closed?
+        @inbox&.push msg unless @inbox&.closed?
       end
 
       def message_type(type)
         @message_type = type
       end
 
-      def thread_count(count = 1)
-        @thread_count = count
+      def thread_count(count)
+        @nr_of_threads = count
       end
 
       def inbox_size
-        @inbox.size
+        @inbox&.size
       end
 
       def die
-        @inbox.close
+        @inbox&.close
         @running = false
       end
 
@@ -54,12 +54,13 @@ module AmqpActors
 
       # @TODO these methods should not be part of DSL
       def valid_types?(type)
+        return true if @message_type.nil?
         if type.is_a?(Enumerable)
           key_value = @message_type.flatten
           key_value.size == 2 && type.is_a?(key_value.first) &&
             type.all? { |t| t.is_a?(key_value.last) }
         else
-          @message_type.nil? || type.is_a?(@message_type)
+          type.is_a?(@message_type)
         end
       end
     end

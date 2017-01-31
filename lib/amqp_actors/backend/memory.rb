@@ -4,14 +4,11 @@ module AmqpActors
       @threads = {}
     end
 
-    def queue(_type, _thread_count)
-      Queue.new
-    end
-
     # @TODO remove dead threads from the array periodically
     def start_actor(type)
-      @threads[type] = Array.new(type.thread_count) do
-        type.running = true
+      type.inbox = Queue.new
+      type.running = true
+      @threads[type] = Array.new(type.nr_of_threads) do
         Thread.new do
           loop do
             break unless System.running? && type.running
@@ -25,6 +22,10 @@ module AmqpActors
           end
         end
       end
+    end
+
+    def stop
+      # noop
     end
 
     def running_threads(type = nil)

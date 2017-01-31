@@ -1,7 +1,14 @@
 require_relative 'config'
-AmqpActors::System.start
 
 describe AmqpActors do
+  before do
+    AmqpActors::System.start
+  end
+
+  after do
+    AmqpActors::System.stop
+  end
+
   it 'should push messages' do
     class MessageActor < AmqpActors::TestActor
       act do |msg|

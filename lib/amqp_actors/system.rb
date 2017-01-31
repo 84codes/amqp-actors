@@ -1,5 +1,6 @@
 require 'set'
 require 'amqp_actors/backend/memory'
+require 'amqp_actors/backend/amqp'
 
 module AmqpActors
   module System
@@ -9,11 +10,12 @@ module AmqpActors
 
     def self.start
       @running = true
-      @actors.each { |a| start_actor(a) }
+      @actors.each { |a| @backend.start_actor(a) }
     end
 
     def self.stop
       @running = false
+      @backend.stop
     end
 
     def self.running?
