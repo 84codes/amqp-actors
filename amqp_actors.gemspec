@@ -4,7 +4,7 @@ $LOAD_PATH.unshift(lib) unless $LOAD_PATH.include?(lib)
 require 'amqp_actors/version'
 
 Gem::Specification.new do |spec|
-  spec.name          = "amqp-actors"
+  spec.name          = "amqp_actors"
   spec.version       = AmqpActors::VERSION
   spec.authors       = ["Anders Bälter", "Magnus Hörberg"]
   spec.email         = ["anders@84codes.com", "magnus@84codes.com"]
