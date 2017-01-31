@@ -2,6 +2,7 @@ require_relative 'config'
 
 describe AmqpActors do
   before do
+    AmqpActors::System.backend = AmqpActors::MemoryQueues.new
     AmqpActors::System.start
   end
 

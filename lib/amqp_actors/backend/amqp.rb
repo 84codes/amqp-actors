@@ -62,20 +62,20 @@ module AmqpActors
       @sub_chan = create_channel
       t = @sub_chan.topic 'amq.topic', durable: true
       @q = @sub_chan.queue @qname, durable: true
-      @q.bind(t, routing_key: TOPIC)
+      @q.bind(t, routing_key: @qname)
       @q.subscribe(manual_ack: true, block: false, exclusive: true) do |delivery, _headers, body|
         begin
           msg = Marshal.load(body)
           @type.new.push msg
           @sub_chan.acknowledge(delivery.delivery_tag, false)
         rescue => e
-          print "[ERROR] #{e.inspect}\n"
-          print e.backtrace
+          print "[ERROR] \n #{e.backtrace.join("\n ")}\n"
+          sleep 1
           @sub_chan.reject(delivery.delivery_tag, true)
         end
       end
     rescue Bunny::AccessRefused => e
-      puts "#{e.inspect} retrying in 3"
+      print "#{e.inspect} retrying in 3\n"
       sleep 3
       @sub_chan&.close
       retry
@@ -83,14 +83,14 @@ module AmqpActors
 
     def publish(msg)
       @pub_topic.publish Marshal.dump(msg), {
-        routing_key: TOPIC,
+        routing_key: @qname,
         persistent: true,
         content_type: 'text/plain',
       }
       success = @pub_chan.wait_for_confirms
       raise "[ERROR] error=publish reason=not-confirmed" unless success
     rescue Timeout::Error
-      puts "[WARN] publish to #{topic} timed out, retrying"
+      print "[WARN] publish to #{topic} timed out, retrying\n"
       retry
     end
 
