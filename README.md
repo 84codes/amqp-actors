@@ -1,3 +1,4 @@
+[![Build Status](https://travis-ci.org/84codes/amqp-actors.svg?branch=master)](https://travis-ci.org/84codes/amqp-actors)
 # AmqpActors
 Actor system with amqp or in memory queues as backend. Provides an easy to use DSL and a high level abstraction to the AMQP protocol.
 ## Hello World
