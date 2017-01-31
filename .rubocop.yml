@@ -1,0 +1,105 @@
+# Offense count: 8
+# Configuration parameters: AllowSafeAssignment.
+AllCops:
+  TargetRubyVersion: 2.3
+  Exclude:
+    - '**/*.haml'
+
+Lint/AssignmentInCondition:
+  Enabled: false
+
+Lint/UnusedBlockArgument:
+  Enabled: true
+
+Lint/UnusedMethodArgument:
+  Enabled: true
+
+Metrics/BlockLength:
+  Exclude:
+    - 'Rakefile'
+    - '**/*.rake'
+    - 'spec/**/*.rb'
+
+Metrics/ClassLength:
+  Max: 100
+
+Metrics/MethodLength:
+  Max: 20
+
+Metrics/LineLength:
+  Max: 100
+  AllowURI: true
+  URISchemes:
+    - http
+    - https
+
+Metrics/AbcSize:
+  Max: 40
+
+Metrics/CyclomaticComplexity:
+  Max: 8
+
+# Configuration parameters: EnforcedStyle, SupportedStyles.
+Style/AsciiComments:
+  Enabled: false
+
+Style/ClassAndModuleChildren:
+  EnforcedStyle: nested
+
+Style/AlignParameters:
+  Enabled: true
+
+Style/AndOr:
+  Enabled: false
+
+Style/BracesAroundHashParameters:
+  Enabled: false
+
+Style/ClassVars:
+  Enabled: false
+
+Style/Documentation:
+  Enabled: false
+
+Style/DotPosition:
+  Enabled: false
+
+Style/EmptyLinesAroundAccessModifier:
+  Enabled: true
+
+Style/IndentHash:
+  Enabled: true
+
+Style/LeadingCommentSpace:
+  Enabled: true
+
+Style/RedundantReturn:
+  Enabled: true
+
+Style/SignalException:
+  Enabled: true
+
+Style/SpaceBeforeFirstArg:
+  Enabled: true
+
+Style/StringLiterals:
+  Enabled: false
+
+Style/TrailingBlankLines:
+  Enabled: true
+
+Style/TrailingCommaInLiteral:
+  Enabled: false
+
+Style/TrailingCommaInArguments:
+  Enabled: false
+
+Style/FrozenStringLiteralComment:
+  Enabled: false
+
+Style/MultilineMethodCallIndentation:
+  EnforcedStyle: indented
+
+# Performance rules
+Performance/RedundantMerge:
+  Enabled: false
