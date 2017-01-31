@@ -73,3 +73,6 @@ end
 TestActor.push 0
 TestActor.output # => 1
 ```
+
+## TODO
+* Add AMQP as backend
