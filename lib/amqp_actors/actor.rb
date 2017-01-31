@@ -15,7 +15,7 @@ module AmqpActors
       attr_accessor :inbox, :act_block, :thread_count, :running
 
       def inherited(subclass)
-        subclass.inbox = System.backend.new
+        subclass.inbox = System.backend.queue(subclass, thread_count)
         System.add(subclass)
       end
 

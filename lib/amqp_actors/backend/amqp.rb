@@ -2,6 +2,9 @@ require 'bunny'
 
 module AmqpActors
   class AmqpQueue
+    def self.start_actor
+    end
+
     def initialize
     end
 

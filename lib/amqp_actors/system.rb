@@ -5,7 +5,7 @@ module AmqpActors
   module System
     @actors = Set.new
     @running = false
-    @backend = AmqpActors::MemoryQueues # @TODO use amqp as default
+    @backend = AmqpActors::MemoryQueues.new # @TODO use amqp as default
 
     def self.start
       @running = true
