@@ -1,7 +1,7 @@
 PATH
   remote: .
   specs:
-    amqp-actors (0.0.1)
+    amqp_actors (0.0.1)
       bunny
 
 GEM
@@ -17,7 +17,7 @@ PLATFORMS
   ruby
 
 DEPENDENCIES
-  amqp-actors!
+  amqp_actors!
   bundler
   minitest
   rake
