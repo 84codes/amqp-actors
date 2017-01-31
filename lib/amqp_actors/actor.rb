@@ -1,12 +1,13 @@
 module AmqpActors
   module DSL
     module InstanceMethods
-      def push(msg)
-        instance_exec(msg, &self.class.act_block)
-      end
-
       def die
         self.class.die
+      end
+
+      # @TODO these methods should not be part of DSL
+      def push(msg)
+        instance_exec(msg, &self.class.act_block)
       end
     end
 
@@ -14,7 +15,7 @@ module AmqpActors
       attr_accessor :inbox, :act_block, :thread_count, :running
 
       def inherited(subclass)
-        subclass.inbox = backend
+        subclass.inbox = System.backend.new
         System.add(subclass)
       end
 
@@ -27,7 +28,7 @@ module AmqpActors
         unless valid_types?(msg)
           raise ArgumentError, "Illegal message type, expected #{@message_type}"
         end
-        @inbox << msg unless @inbox.closed?
+        @inbox.push msg unless @inbox.closed?
       end
 
       def message_type(type)
@@ -51,7 +52,7 @@ module AmqpActors
         class_eval(&block) if block_given?
       end
 
-      # @TODO these methods should only be available through the DSL
+      # @TODO these methods should not be part of DSL
       def valid_types?(type)
         if type.is_a?(Enumerable)
           key_value = @message_type.flatten
@@ -59,13 +60,6 @@ module AmqpActors
             type.all? { |t| t.is_a?(key_value.last) }
         else
           @message_type.nil? || type.is_a?(@message_type)
-        end
-      end
-
-      def backend
-        case System.backend
-        when :in_memory
-          Queue.new
         end
       end
     end

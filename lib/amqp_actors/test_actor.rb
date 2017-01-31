@@ -16,5 +16,5 @@ module AmqpActors
       end
     end
   end
-  System.backend = :in_memory
+  System.backend = MemoryQueues
 end
