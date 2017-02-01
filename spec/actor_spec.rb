@@ -2,7 +2,6 @@ require_relative 'config'
 
 describe AmqpActors do
   before do
-    AmqpActors::System.backend = AmqpActors::MemoryQueues.new
     AmqpActors::System.start
   end
 
@@ -32,7 +31,7 @@ describe AmqpActors do
 
     DieActor.push(1)
     DieActor.output
-    AmqpActors::System.backend.running_threads(DieActor).must_equal(0)
+    AmqpActors::System.running_threads(DieActor).must_equal(0)
   end
 
   it 'should raise for wrong message type' do

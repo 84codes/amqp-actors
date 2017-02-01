@@ -16,5 +16,4 @@ module AmqpActors
       end
     end
   end
-  System.backend = MemoryQueues.new
 end

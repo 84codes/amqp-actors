@@ -3,7 +3,6 @@ require 'bunny-mock'
 
 describe AmqpActors::AmqpQueues do
   before do
-    AmqpActors::System.backend = AmqpActors::AmqpQueues.new BunnyMock.new
     AmqpActors::System.start
   end
 
@@ -13,6 +12,12 @@ describe AmqpActors::AmqpQueues do
 
   it 'should push messages' do
     class AmqpActor < AmqpActors::TestActor
+      backend :amqp_mock # do
+        #queue_name 'test' #default "#{actor.class}::actor"
+        #routing_key 'test.#' #default queue_name
+        #exchange 'amq.topic' #default amq.default
+      #end
+
       act do |msg|
         output msg
       end

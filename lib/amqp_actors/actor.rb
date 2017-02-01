@@ -12,7 +12,7 @@ module AmqpActors
     end
 
     module ClassMethods
-      attr_accessor :inbox, :act_block, :nr_of_threads, :running
+      attr_accessor :inbox, :act_block, :nr_of_threads, :running, :selected_backend
 
       def inherited(subclass)
         subclass.nr_of_threads = 1
@@ -29,6 +29,10 @@ module AmqpActors
           raise ArgumentError, "Illegal message type, expected #{@message_type}"
         end
         @inbox&.push msg unless @inbox&.closed?
+      end
+
+      def backend(b)
+        @selected_backend = b
       end
 
       def message_type(type)
