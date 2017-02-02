@@ -87,8 +87,6 @@ module AmqpActors
       def valid_backend?(clazz)
         %i(start_actor stop) & clazz.instance_methods
       end
-
-      class NotConfigured < AmqpActors::Error; end
     end
   end
 

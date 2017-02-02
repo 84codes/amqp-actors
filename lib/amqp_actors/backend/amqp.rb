@@ -1,13 +1,15 @@
 require 'bunny'
 
 module AmqpActors
+  # rubocop:disable Style/TrivialAccessors
   class AmqpQueues
     class << self
       attr_accessor :connections
-      attr_reader :amqp_url, :client
+      attr_reader :pub_url, :sub_url, :client
 
       def configure(cfg)
-        @amqp_url = cfg[:amqp_url]
+        @pub_url = cfg[:amqp_pub_url] || cfg[:amqp_url]
+        @sub_url = cfg[:amqp_sub_url] || cfg[:amqp_url]
         @client = cfg[:client]
         self
       end
@@ -16,53 +18,50 @@ module AmqpActors
     # Instance methods
     def initialize(&blk)
       instance_eval(&blk) if block_given?
+      @pub_url ||= self.class.pub_url
+      @sub_url ||= self.class.sub_url
       self.class.connections ||= {}
       self.class.client ||= Bunny
-      raise ArgumentError, 'Consutructor requires a AMQP connection url' if amqp_url.nil?
-      @bunny = AmqpQueues.connections[amqp_url] ||= AmqpQueues.client.new(amqp_url)
+      if @pub_url.nil? || @sub_url.nil?
+        raise NotConfigured, 'use AmqpQueues.configure or AmqpActor#backend to provide a amqp url'
+      end
+      @pub_conn = AmqpQueues.connections[@pub_url] ||= AmqpQueues.client.new(@pub_url)
+      @sub_conn = AmqpQueues.connections[@sub_url] ||= AmqpQueues.client.new(@sub_url)
     end
 
-    def amqp_url(url = nil)
-      if url
-        @amqp_url = url
-      else
-        @amqp_url ||= self.class.amqp_url
-      end
+    def amqp_url(url)
+      @pub_url = @sub_url = url
     end
 
-    def queue_name(q = nil)
-      if q
-        @queue_name = q
-      else
-        @queue_name
-      end
+    def amqp_pub_url(url)
+      @pub_url = url
     end
 
-    def routing_keys(rks = nil)
-      if rks
-        @routing_keys = rks
-      else
-        @routing_keys ||= []
-      end
+    def amqp_sub_url(url)
+      @sub_url = url
     end
 
-    def exchange(x = nil)
-      if x
-        @exchange = x
-      else
-        @exchange
-      end
+    def queue_name(q)
+      @queue_name = q
+    end
+
+    def routing_keys(rks)
+      @routing_keys = rks
+    end
+
+    def exchange(x)
+      @exchange = x
     end
 
     def start_actor(type)
-      @bunny.start
+      @pub_conn.start
+      @sub_conn.start
       cfg = {
-        exchange: exchange,
-        routing_keys: routing_keys,
-        amqp_url: amqp_url,
-        queue_name: queue_name,
+        exchange: @exchange,
+        routing_keys: @routing_keys,
+        queue_name: @queue_name,
       }
-      type.inbox = Channel.new(@bunny, type, cfg)
+      type.inbox = Channel.new(@pub_conn, @sub_conn, type, cfg)
       type.running = true
     end
 
@@ -74,8 +73,9 @@ module AmqpActors
   class Channel
     TOPIC = 'actor.message'.freeze
 
-    def initialize(conn, type, cfg = {})
-      @conn = conn
+    def initialize(pub_conn, sub_conn, type, cfg = {})
+      @pub_conn = pub_conn
+      @sub_conn = sub_conn
       @prefetch = type.thread_count
       @type = type
       @qname = "AmqpActor::#{cfg[:queue_name] || snake_case(type.to_s)}"
@@ -88,7 +88,7 @@ module AmqpActors
     end
 
     def closed?
-      @conn.closed?
+      @pub_conn.closed? || @sub_conn.closed?
     end
 
     def push(msg)
@@ -104,20 +104,20 @@ module AmqpActors
     end
 
     def close
-      @pub_chan&.close
-      @sub_chan&.close
+      @pub_chan.close
+      @sub_chan.close
     end
 
     private
 
     def create_pub_channel
-      ch = @conn.create_channel
+      ch = @pub_conn.create_channel
       ch.confirm_select
       ch
     end
 
     def create_sub_channel
-      ch = @conn.create_channel(nil, @prefetch)
+      ch = @sub_conn.create_channel(nil, @prefetch)
       ch.prefetch @prefetch * 2
       ch
     end
@@ -160,10 +160,10 @@ module AmqpActors
 
     def snake_case(camel_cased_word)
       camel_cased_word.to_s.gsub(/::/, '/')
-      .gsub(/([A-Z]+)([A-Z][a-z])/, '\1_\2')
-      .gsub(/([a-z\d])([A-Z])/, '\1_\2')
-      .tr("-", "_")
-      .downcase
+        .gsub(/([A-Z]+)([A-Z][a-z])/, '\1_\2')
+        .gsub(/([a-z\d])([A-Z])/, '\1_\2')
+        .tr("-", "_")
+        .downcase
     end
   end
 end

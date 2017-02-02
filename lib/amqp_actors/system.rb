@@ -4,9 +4,9 @@ require 'amqp_actors/backend/amqp'
 
 module AmqpActors
   class Error < StandardError; end
+  class NotConfigured < Error; end
 
   module System
-
     @actors = Set.new
     @running = false
 
@@ -45,6 +45,5 @@ module AmqpActors
     def self.push(msg, type)
       @actors.select { |a| a.is_a?(type) }.each { |a| a.push(msg) }
     end
-
   end
 end
