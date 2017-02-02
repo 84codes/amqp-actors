@@ -21,6 +21,7 @@ module AmqpActors
       @type = type
       @pub_url ||= self.class.pub_url
       @sub_url ||= self.class.sub_url
+      @content_type = :serialize
       self.class.connections ||= {}
       self.class.client ||= Bunny
       if @pub_url.nil? || @sub_url.nil?
@@ -42,16 +43,20 @@ module AmqpActors
       @sub_url = url
     end
 
-    def queue_name(q)
-      @queue_name = q
+    def queue_name(queue_name)
+      @queue_name = queue_name
     end
 
-    def routing_keys(*rks)
-      @routing_keys = rks
+    def routing_keys(*routing_keys)
+      @routing_keys = routing_keys
     end
 
-    def exchange(x)
-      @exchange = x
+    def exchange(exchange)
+      @exchange = exchange
+    end
+
+    def content_type(content_type)
+      @content_type = content_type
     end
 
     def start
@@ -61,6 +66,7 @@ module AmqpActors
         exchange: @exchange,
         routing_keys: @routing_keys,
         queue_name: @queue_name,
+        content_type: @content_type
       }
       @inbox = Channel.new(@pub_conn, @sub_conn, @type, cfg)
     end
@@ -81,7 +87,7 @@ module AmqpActors
       @qname = "AmqpActor::#{cfg[:queue_name] || snake_case(type.to_s)}"
       @exchange = cfg[:exchange] || 'amq.topic'
       @routing_keys = (cfg[:routing_keys] || []) << TOPIC
-
+      @encoder, @content_type = content_handler(cfg[:content_type])
       @pub_chan = create_pub_channel
       @pub_exchange = @pub_chan.topic(@exchange, durable: true)
       subscribe
@@ -129,11 +135,11 @@ module AmqpActors
       @routing_keys.each { |rk| @q.bind(x, routing_key: rk) }
       @q.subscribe(manual_ack: true, block: false, exclusive: true) do |delivery, _headers, body|
         begin
-          msg = Marshal.load(body)
+          msg = @encoder.decode(body)
           @type.new.push msg
           @sub_chan.acknowledge(delivery.delivery_tag, false)
         rescue => e
-          print "[ERROR] \n #{e.backtrace.join("\n ")}\n"
+          print "[ERROR] #{e.message}\n #{e.backtrace.join("\n ")}\n"
           sleep 1
           @sub_chan.reject(delivery.delivery_tag, true)
         end
@@ -146,10 +152,10 @@ module AmqpActors
     end
 
     def publish(rk, msg)
-      @pub_exchange.publish Marshal.dump(msg), {
+      @pub_exchange.publish @encoder.encode(msg), {
         routing_key: rk,
         persistent: true,
-        content_type: 'text/plain',
+        content_type: @content_type,
       }
       success = @pub_chan.wait_for_confirms
       raise "[ERROR] error=publish reason=not-confirmed" unless success
@@ -164,6 +170,45 @@ module AmqpActors
         .gsub(/([a-z\d])([A-Z])/, '\1_\2')
         .tr("-", "_")
         .downcase
+    end
+
+    def content_handler(content_type)
+      case content_type
+      when :serialize
+        [Serialize, 'text/plain']
+      when :Json
+        [Json, 'application/json']
+      else
+        [Plain, 'text/plain']
+      end
+    end
+  end
+
+  class Plain
+    def self.encode(_data); end
+
+    def self.decode(data)
+      data
+    end
+  end
+
+  class Json
+    def self.encode(data)
+      data.to_json
+    end
+
+    def self.decode(data)
+      JSON.parse(data, symbolize_keys: true)
+    end
+  end
+
+  class Serialize
+    def self.encode(data)
+      Marshal.dump(data)
+    end
+
+    def self.decode(data)
+      Marshal.load(data)
     end
   end
 end

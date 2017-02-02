@@ -15,7 +15,7 @@ module AmqpActors
               msg = @type.inbox.pop
               @type.new.push(msg)
             rescue => e
-              print "[ERROR] \n #{e.backtrace.join("\n ")}\n"
+              print "[ERROR] #{e.message} \n #{e.backtrace.join("\n ")}\n"
             end
           end
         end

@@ -44,10 +44,6 @@ module AmqpActors
         @running = true
       end
 
-      def running_threads
-        @backend_instance.running_threads
-      end
-
       def message_type(type)
         @message_type = type
       end
