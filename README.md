@@ -1,4 +1,6 @@
 [![Build Status](https://travis-ci.org/84codes/amqp-actors.svg?branch=master)](https://travis-ci.org/84codes/amqp-actors)
+[![Code Climate](https://codeclimate.com/github/84codes/amqp-actors/badges/gpa.svg)](https://codeclimate.com/github/84codes/amqp-actors)
+[![Test Coverage](https://codeclimate.com/github/84codes/amqp-actors/badges/coverage.svg)](https://codeclimate.com/github/84codes/amqp-actors/coverage)
 # AmqpActors
 Actor system with amqp or in memory queues as backend. Provides an easy to use DSL and a high level abstraction to the AMQP protocol.
 ## Hello World
