@@ -29,14 +29,6 @@ module AmqpActors
       instance_eval(&blk)
     end
 
-    def self.amqp_url(url = nil)
-      if url
-        @amqp_url = url
-      else
-        @amqp_url
-      end
-    end
-
     def self.add(actor)
       @actors.add(actor)
       actor.start_backend(@default_backend) if @running

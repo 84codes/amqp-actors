@@ -16,8 +16,9 @@ module AmqpActors
     end
 
     # Instance methods
-    def initialize(&blk)
+    def initialize(type, &blk)
       instance_eval(&blk) if block_given?
+      @type = type
       @pub_url ||= self.class.pub_url
       @sub_url ||= self.class.sub_url
       self.class.connections ||= {}
@@ -53,7 +54,7 @@ module AmqpActors
       @exchange = x
     end
 
-    def start_actor(type)
+    def start
       @pub_conn.start
       @sub_conn.start
       cfg = {
@@ -61,8 +62,7 @@ module AmqpActors
         routing_keys: @routing_keys,
         queue_name: @queue_name,
       }
-      type.inbox = Channel.new(@pub_conn, @sub_conn, type, cfg)
-      type.running = true
+      @inbox = Channel.new(@pub_conn, @sub_conn, @type, cfg)
     end
 
     def stop

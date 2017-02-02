@@ -39,12 +39,13 @@ module AmqpActors
       end
 
       def start_backend(default_backend)
-        @backend_instance = (@backend || default_backend).new(&@backend_block)
-        @backend_instance.start_actor(self)
+        @backend_instance = (@backend || default_backend).new(self, &@backend_block)
+        @inbox = @backend_instance.start
+        @running = true
       end
 
       def running_threads
-        @backend_instance.running_threads(self)
+        @backend_instance.running_threads
       end
 
       def message_type(type)
