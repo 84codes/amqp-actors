@@ -12,10 +12,10 @@ module AmqpActors
     end
 
     module ClassMethods
-      attr_accessor :inbox, :act_block, :nr_of_threads, :running, :selected_backend
+      attr_accessor :inbox, :act_block, :running
+      attr_reader :backend_instance
 
       def inherited(subclass)
-        subclass.nr_of_threads = 1
         System.add(subclass)
       end
 
@@ -31,16 +31,32 @@ module AmqpActors
         @inbox&.push msg unless @inbox&.closed?
       end
 
-      def backend(b)
-        @selected_backend = b
+      # @TODO these should be private to the module
+      def backend(clazz, &blk)
+        raise ArgumentError, "Must implement :start_actor and :stop" unless valid_backend? clazz
+        @backend = clazz
+        @backend_block = blk
+      end
+
+      def start_backend(default_backend)
+        @backend_instance = (@backend || default_backend).new(&@backend_block)
+        @backend_instance.start_actor(self)
+      end
+
+      def running_threads
+        @backend_instance.running_threads(self)
       end
 
       def message_type(type)
         @message_type = type
       end
 
-      def thread_count(count)
-        @nr_of_threads = count
+      def thread_count(count = nil)
+        if count
+          @thread_count = count
+        else
+          @thread_count ||= 1
+        end
       end
 
       def inbox_size
@@ -67,6 +83,12 @@ module AmqpActors
           type.is_a?(@message_type)
         end
       end
+
+      def valid_backend?(clazz)
+        %i(start_actor stop) & clazz.instance_methods
+      end
+
+      class NotConfigured < AmqpActors::Error; end
     end
   end
 

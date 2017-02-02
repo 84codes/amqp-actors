@@ -1,3 +1,5 @@
+require 'bunny-mock'
+
 module AmqpActors
   class TestActor
     extend DSL::ClassMethods

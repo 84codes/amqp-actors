@@ -31,7 +31,8 @@ describe AmqpActors do
 
     DieActor.push(1)
     DieActor.output
-    AmqpActors::System.running_threads(DieActor).must_equal(0)
+
+    DieActor.running_threads.must_equal(0)
   end
 
   it 'should raise for wrong message type' do

@@ -1,9 +1,10 @@
 require_relative 'config'
-require 'bunny-mock'
 
 describe AmqpActors::AmqpQueues do
   before do
-    AmqpActors::System.start
+    AmqpActors::System.start(
+      default_backend: AmqpActors::AmqpQueues.configure(client: BunnyMock, amqp_url: '')
+    )
   end
 
   after do
@@ -12,10 +13,13 @@ describe AmqpActors::AmqpQueues do
 
   it 'should push messages' do
     class AmqpActor < AmqpActors::TestActor
-      backend :amqp_mock # do
+      #backend AmqpActors::AmqpQueues do
+        #amqp_url 'amqp://localhost/test'
+#
         #queue_name 'test' #default "#{actor.class}::actor"
-        #routing_key 'test.#' #default queue_name
+        #routing_keys 'test.#' #default queue_name
         #exchange 'amq.topic' #default amq.default
+        #puts 'done'
       #end
 
       act do |msg|

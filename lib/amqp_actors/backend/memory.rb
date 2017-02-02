@@ -8,7 +8,7 @@ module AmqpActors
     def start_actor(type)
       type.inbox = Queue.new
       type.running = true
-      @threads[type] = Array.new(type.nr_of_threads) do
+      @threads[type] = Array.new(type.thread_count) do
         Thread.new do
           loop do
             break unless System.running? && type.running
