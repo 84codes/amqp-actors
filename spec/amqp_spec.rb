@@ -1,4 +1,4 @@
-require_relative 'config'
+require_relative 'spec_helper'
 
 describe AmqpActors::AmqpQueues do
   before do
@@ -13,14 +13,13 @@ describe AmqpActors::AmqpQueues do
 
   it 'should push messages' do
     class AmqpActor < AmqpActors::TestActor
-      #backend AmqpActors::AmqpQueues do
-        #amqp_url 'amqp://localhost/test'
-#
-        #queue_name 'test' #default "#{actor.class}::actor"
-        #routing_keys 'test.#' #default queue_name
-        #exchange 'amq.topic' #default amq.default
-        #puts 'done'
-      #end
+      backend AmqpActors::AmqpQueues do
+        amqp_url 'amqp://localhost/test'
+
+        queue_name 'test' # default "#{actor.class}::actor"
+        routing_keys 'test.#' # default queue_name
+        exchange 'amq.topic' # default amq.default
+      end
 
       act do |msg|
         output msg

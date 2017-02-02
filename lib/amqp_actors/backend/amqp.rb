@@ -45,7 +45,7 @@ module AmqpActors
       @queue_name = q
     end
 
-    def routing_keys(rks)
+    def routing_keys(*rks)
       @routing_keys = rks
     end
 
