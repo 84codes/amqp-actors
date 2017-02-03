@@ -27,6 +27,7 @@ module AmqpActors
         unless valid_types?(msg)
           raise ArgumentError, "Illegal message type, expected #{@message_type}"
         end
+        raise NotConfigured, 'you must provide an act block' unless @act_block
         @inbox&.push msg unless @inbox&.closed? && @running
       end
 

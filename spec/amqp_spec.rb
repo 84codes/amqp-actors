@@ -15,7 +15,8 @@ describe AmqpActors::AmqpQueues do
     class AmqpActor < AmqpActors::TestActor
       backend AmqpActors::AmqpQueues do
         amqp_url 'amqp://localhost/test'
-
+        amqp_pub_url 'amqp://localhost/test'
+        amqp_sub_url 'amqp://localhost/test'
         queue_name 'test' # default "#{actor.class}::actor"
         routing_keys 'test.#' # default queue_name
         exchange 'amq.topic' # default amq.default
@@ -81,4 +82,13 @@ describe AmqpActors::AmqpQueues do
       PlainActor.output.must_equal(expected)
     end
   end
+
+  it 'should raise if not configured' do
+    class NotConfiguredActor < AmqpActors::Actor
+      backend AmqpActors::AmqpQueues
+    end
+    proc { NotConfiguredActor.push(1) }.must_raise(AmqpActors::NotConfigured)
+  end
+
+
 end
