@@ -89,6 +89,4 @@ describe AmqpActors::AmqpQueues do
     end
     proc { NotConfiguredActor.push(1) }.must_raise(AmqpActors::NotConfigured)
   end
-
-
 end

@@ -36,6 +36,8 @@ module AmqpActors
         raise ArgumentError, "Backend must implement :start and :stop" unless valid_backend? clazz
         @backend = clazz
         @backend_block = blk
+        @backend_instance&.stop
+        start_backend(@backend)
       end
 
       def start_backend(default_backend)

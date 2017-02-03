@@ -72,7 +72,8 @@ module AmqpActors
     end
 
     def stop
-      AmqpQueues.connections.delete(amqp_url)&.stop
+      AmqpQueues.connections.delete(@pub_url)&.stop
+      AmqpQueues.connections.delete(@sub_url)&.stop
     end
   end
 
