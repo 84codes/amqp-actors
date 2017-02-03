@@ -64,6 +64,7 @@ module AmqpActors
 
       def die
         @inbox&.close
+        @backend_instance&.stop
         @running = false
       end
 
