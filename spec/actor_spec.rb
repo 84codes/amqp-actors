@@ -96,4 +96,18 @@ describe AmqpActors do
     CollectionsActor.output.must_equal(["1"])
     proc { CollectionsActor.push("hej") }.must_raise(ArgumentError)
   end
+
+  it 'should return inbox size' do
+    class ImboxSizeActor < AmqpActors::TestActor
+      act do |msg|
+        output msg
+      end
+    end
+
+    ImboxSizeActor.inbox_size.must_equal 0
+    ImboxSizeActor.push(1)
+    ImboxSizeActor.inbox_size.must_equal 1
+    ImboxSizeActor.output
+    ImboxSizeActor.inbox_size.must_equal 0
+  end
 end
