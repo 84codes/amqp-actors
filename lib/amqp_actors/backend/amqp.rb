@@ -110,12 +110,8 @@ module AmqpActors
       @publisher.publish(@subscriber.to_s, msg)
     end
 
-    def push_to(rks, msg)
-      if rks.is_a?(Array)
-        rks.each { |rk| @publisher.publish(rk, msg) }
-      else
-        @publisher.publish(rk, msg)
-      end
+    def push_to(rk, msg)
+      @publisher.publish(rk, msg)
     end
   end
 
@@ -176,16 +172,20 @@ module AmqpActors
       ch
     end
 
-    def publish(rk, msg)
+    def publish(rks, msg)
+      if rks.is_a?(Array)
+        rks.each { |rk| publish(rk, msg) }
+        return
+      end
       @exchange.publish @encoder.encode(msg), {
-        routing_key: rk,
+        routing_key: rks,
         persistent: true,
         content_type: @content_type,
       }
       success = @chan.wait_for_confirms
       raise "[ERROR] error=publish reason=not-confirmed" unless success
     rescue Timeout::Error
-      print "[WARN] publish to #{topic} timed out, retrying\n"
+      print "[WARN] publish to #{rks} timed out, retrying\n"
       retry
     end
 
