@@ -55,4 +55,45 @@ describe AmqpActors do
       end
     end.must_raise(ArgumentError)
   end
+
+  it 'should get and set thread_count' do
+    class ThreadCountActor < AmqpActors::TestActor
+      thread_count 2
+      act do |_msg|
+        output ThreadCountActor.thread_count
+      end
+    end
+
+    ThreadCountActor.push('whatever')
+    ThreadCountActor.output.must_equal(2)
+  end
+
+  it 'should be able to use helpers' do
+    class HelpersActor < AmqpActors::TestActor
+      helpers do
+        def sum(a, b)
+          a + b
+        end
+      end
+      act do |msg|
+        output sum(1, msg)
+      end
+    end
+
+    HelpersActor.push(1)
+    HelpersActor.output.must_equal(2)
+  end
+
+  it 'should handle collections message type' do
+    class CollectionsActor < AmqpActors::TestActor
+      message_type Array => String
+      act do |msg|
+        output msg
+      end
+    end
+
+    CollectionsActor.push(["1"])
+    CollectionsActor.output.must_equal(["1"])
+    proc { CollectionsActor.push("hej") }.must_raise(ArgumentError)
+  end
 end

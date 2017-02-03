@@ -12,8 +12,7 @@ module AmqpActors
     end
 
     module ClassMethods
-      attr_accessor :inbox, :act_block, :running
-      attr_reader :backend_instance
+      attr_reader :backend_instance, :inbox, :act_block, :running
 
       def inherited(subclass)
         System.add(subclass)
@@ -28,7 +27,7 @@ module AmqpActors
         unless valid_types?(msg)
           raise ArgumentError, "Illegal message type, expected #{@message_type}"
         end
-        @inbox&.push msg unless @inbox&.closed?
+        @inbox&.push msg unless @inbox&.closed? && @running
       end
 
       # @TODO these should be private to the module
@@ -77,8 +76,11 @@ module AmqpActors
           key_value.size == 2 && type.is_a?(key_value.first) &&
             type.all? { |t| t.is_a?(key_value.last) }
         else
-          type.is_a?(@message_type)
+          a = type.is_a?(@message_type)
+          !a.nil? && a
         end
+      rescue TypeError
+        false
       end
 
       def valid_backend?(clazz)

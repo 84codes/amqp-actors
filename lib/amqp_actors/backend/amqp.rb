@@ -77,8 +77,6 @@ module AmqpActors
   end
 
   class Channel
-    TOPIC = 'actor.message'.freeze
-
     def initialize(pub_conn, sub_conn, type, cfg = {})
       @pub_conn = pub_conn
       @sub_conn = sub_conn
@@ -86,7 +84,7 @@ module AmqpActors
       @type = type
       @qname = "AmqpActor::#{cfg[:queue_name] || snake_case(type.to_s)}"
       @exchange = cfg[:exchange] || 'amq.topic'
-      @routing_keys = (cfg[:routing_keys] || []) << TOPIC
+      @routing_keys = (cfg[:routing_keys] || []) << @qname
       @encoder, @content_type = content_handler(cfg[:content_type])
       @pub_chan = create_pub_channel
       @pub_exchange = @pub_chan.topic(@exchange, durable: true)
@@ -98,7 +96,7 @@ module AmqpActors
     end
 
     def push(msg)
-      push_to(TOPIC, msg)
+      push_to(@qname, msg)
     end
 
     def push_to(rk, msg)
@@ -185,7 +183,9 @@ module AmqpActors
   end
 
   class Plain
-    def self.encode(_data); end
+    def self.encode(data)
+      data
+    end
 
     def self.decode(data)
       data

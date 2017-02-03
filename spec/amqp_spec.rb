@@ -32,6 +32,7 @@ describe AmqpActors::AmqpQueues do
   end
 
   describe :content_handler do
+    puts "this block"
     it 'should handle :serilize' do
       class SerializeActor < AmqpActors::TestActor
         backend AmqpActors::AmqpQueues do
