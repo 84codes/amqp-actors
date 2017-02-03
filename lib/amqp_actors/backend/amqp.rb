@@ -13,6 +13,15 @@ module AmqpActors
         @client = cfg[:client]
         self
       end
+
+      def push_to(rks, msg, cfg = {})
+        raise NotConfigured, "Can't .push_to without configured amqp_[pub_]url" unless @pub_url
+        unless @publisher
+          conn = @connections[@pub_url] ||= AmqpQueues.client.new(@pub_url)
+          @publisher = Publisher.new(nil, conn, cfg)
+        end
+        @publisher.publish(rks, msg)
+      end
     end
 
     # Instance methods
@@ -79,99 +88,39 @@ module AmqpActors
 
   class Channel
     def initialize(pub_conn, sub_conn, type, cfg = {})
-      @pub_conn = pub_conn
-      @sub_conn = sub_conn
-      @prefetch = type.thread_count
-      @type = type
-      @qname = "AmqpActor::#{cfg[:queue_name] || snake_case(type.to_s)}"
-      @exchange = cfg[:exchange] || 'amq.topic'
-      @routing_keys = (cfg[:routing_keys] || []) << @qname
-      @encoder, @content_type = content_handler(cfg[:content_type])
-      @pub_chan = create_pub_channel
-      @pub_exchange = @pub_chan.topic(@exchange, durable: true)
-      subscribe
+      @publisher = Publisher.new(type, pub_conn, cfg)
+      @subscriber = Subscriber.new(type, sub_conn, cfg)
+      @subscriber.subscribe
     end
 
     def closed?
-      @pub_conn.closed? || @sub_conn.closed?
-    end
-
-    def push(msg)
-      push_to(@qname, msg)
-    end
-
-    def push_to(rk, msg)
-      publish(rk, msg)
-    end
-
-    def size
-      @q&.message_count
+      @publisher.closed? || @subscriber.closed?
     end
 
     def close
-      @pub_chan.close
-      @sub_chan.close
+      @publisher.close
+      @subscriber.close
     end
 
-    private
-
-    def create_pub_channel
-      ch = @pub_conn.create_channel
-      ch.confirm_select
-      ch
+    def size
+      @subscriber.size
     end
 
-    def create_sub_channel
-      ch = @sub_conn.create_channel(nil, @prefetch)
-      ch.prefetch @prefetch * 2
-      ch
+    def push(msg)
+      @publisher.publish(@subscriber.to_s, msg)
     end
 
-    def subscribe
-      @sub_chan = create_sub_channel
-      x = @sub_chan.topic(@exchange, durable: true)
-      @q = @sub_chan.queue @qname, durable: true
-      @routing_keys.each { |rk| @q.bind(x, routing_key: rk) }
-      @q.subscribe(manual_ack: true, block: false, exclusive: true) do |delivery, _headers, body|
-        begin
-          msg = @encoder.decode(body)
-          @type.new.push msg
-          @sub_chan.acknowledge(delivery.delivery_tag, false)
-        rescue => e
-          print "[ERROR] #{e.message}\n #{e.backtrace.join("\n ")}\n"
-          sleep 1
-          @sub_chan.reject(delivery.delivery_tag, true)
-        end
+    def push_to(rks, msg)
+      if rks.is_a?(Array)
+        rks.each { |rk| @publisher.publish(rk, msg) }
+      else
+        @publisher.publish(rk, msg)
       end
-    rescue Bunny::AccessRefused => e
-      print "#{e.inspect} retrying in 3\n"
-      sleep 3
-      @sub_chan&.close
-      retry
     end
+  end
 
-    def publish(rk, msg)
-      @pub_exchange.publish @encoder.encode(msg), {
-        routing_key: rk,
-        persistent: true,
-        content_type: @content_type,
-      }
-      success = @pub_chan.wait_for_confirms
-      raise "[ERROR] error=publish reason=not-confirmed" unless success
-    rescue Timeout::Error
-      print "[WARN] publish to #{topic} timed out, retrying\n"
-      retry
-    end
-
-    def snake_case(camel_cased_word)
-      camel_cased_word.to_s.gsub(/::/, '/')
-        .gsub(/([A-Z]+)([A-Z][a-z])/, '\1_\2')
-        .gsub(/([a-z\d])([A-Z])/, '\1_\2')
-        .tr("-", "_")
-        .downcase
-    end
-
-    def content_handler(content_type)
+  module ContentHandler
+    def self.content_handler(content_type)
       case content_type
       when :serialize
         [Serialize, 'text/plain']
@@ -181,35 +130,138 @@ module AmqpActors
         [Plain, 'text/plain']
       end
     end
+
+    class Plain
+      def self.encode(data)
+        data
+      end
+
+      def self.decode(data)
+        data
+      end
+    end
+
+    class Json
+      def self.encode(data)
+        data.to_json
+      end
+
+      def self.decode(data)
+        JSON.parse(data, symbolize_keys: true)
+      end
+    end
+
+    class Serialize
+      def self.encode(data)
+        Marshal.dump(data)
+      end
+
+      def self.decode(data)
+        Marshal.load(data)
+      end
+    end
   end
 
-  class Plain
-    def self.encode(data)
-      data
+  class Publisher
+    def initialize(_type, conn, cfg)
+      @conn = conn
+      @chan = create_pub_channel
+      @exchange = @chan.topic(cfg[:exchange] || 'amq.topic', durable: true)
+      @encoder, @content_type = ContentHandler.content_handler(cfg[:content_type])
     end
 
-    def self.decode(data)
-      data
+    def create_pub_channel
+      ch = @conn.create_channel
+      ch.confirm_select
+      ch
+    end
+
+    def publish(rk, msg)
+      @exchange.publish @encoder.encode(msg), {
+        routing_key: rk,
+        persistent: true,
+        content_type: @content_type,
+      }
+      success = @chan.wait_for_confirms
+      raise "[ERROR] error=publish reason=not-confirmed" unless success
+    rescue Timeout::Error
+      print "[WARN] publish to #{topic} timed out, retrying\n"
+      retry
+    end
+
+    def close
+      @chan.close
+    end
+
+    def closed?
+      @conn.closed?
     end
   end
 
-  class Json
-    def self.encode(data)
-      data.to_json
+  class Subscriber
+    def initialize(type, conn, cfg)
+      @prefetch = type.thread_count
+      @conn = conn
+      @type = type
+      @qname = "AmqpActor::#{cfg[:queue_name] || snake_case(type.to_s)}"
+      @exchange_type = cfg[:exchange] || 'amq.topic'
+      @routing_keys = (cfg[:routing_keys] || []) << @qname
+      @encoder, @content_type = ContentHandler.content_handler(cfg[:content_type])
     end
 
-    def self.decode(data)
-      JSON.parse(data, symbolize_keys: true)
-    end
-  end
-
-  class Serialize
-    def self.encode(data)
-      Marshal.dump(data)
+    def create_sub_channel
+      ch = @conn.create_channel(nil, @prefetch)
+      ch.prefetch @prefetch * 2
+      ch
     end
 
-    def self.decode(data)
-      Marshal.load(data)
+    def subscribe
+      @chan = create_sub_channel
+      x = @chan.topic(@exchange_type, durable: true)
+      @q = @chan.queue @qname, durable: true
+      @routing_keys.each { |rk| @q.bind(x, routing_key: rk) }
+      @q.subscribe(manual_ack: true, block: false, exclusive: true) do |delivery, _headers, body|
+        begin
+          msg = @encoder.decode(body)
+          @type.new.push msg
+          @chan.acknowledge(delivery.delivery_tag, false)
+        rescue => e
+          print "[ERROR] #{e.message}\n #{e.backtrace.join("\n ")}\n"
+          sleep 1
+          @chan.reject(delivery.delivery_tag, true)
+        end
+      end
+    rescue Bunny::AccessRefused => e
+      print "#{e.inspect} retrying in 3\n"
+      sleep 3
+      @chan&.close
+      retry
+    end
+
+    def close
+      @chan.close
+    end
+
+    def closed?
+      @conn.closed?
+    end
+
+    def to_s
+      @qname
+    end
+
+    def size
+      @q&.message_count
+    end
+
+    private
+
+    def snake_case(camel_cased_word)
+      camel_cased_word.to_s.gsub(/::/, '/')
+        .gsub(/([A-Z]+)([A-Z][a-z])/, '\1_\2')
+        .gsub(/([a-z\d])([A-Z])/, '\1_\2')
+        .tr("-", "_")
+        .downcase
     end
   end
 end

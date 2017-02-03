@@ -16,6 +16,11 @@ module AmqpActors
         sleep 0.01 until @output
         @output
       end
+
+      def start_backend(*args)
+        @act_block = proc { |msg| output msg }
+        super
+      end
     end
   end
 end

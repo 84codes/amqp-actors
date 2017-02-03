@@ -89,4 +89,10 @@ describe AmqpActors::AmqpQueues do
     end
     proc { NotConfiguredActor.push(1) }.must_raise(AmqpActors::NotConfigured)
   end
+
+  it 'should pust_to rks' do
+    class PushToActor < AmqpActors::TestActor; end
+    AmqpActors::AmqpQueues.push_to(PushToActor.inbox.to_s, 1)
+    PushToActor.push(1)
+  end
 end
