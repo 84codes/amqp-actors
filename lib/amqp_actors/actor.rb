@@ -33,7 +33,7 @@ module AmqpActors
 
       # @TODO these should be private to the module
       def backend(clazz, &blk)
-        raise ArgumentError, "Must implement :start_actor and :stop" unless valid_backend? clazz
+        raise ArgumentError, "Backend must implement :start and :stop" unless valid_backend? clazz
         @backend = clazz
         @backend_block = blk
       end
@@ -86,7 +86,8 @@ module AmqpActors
       end
 
       def valid_backend?(clazz)
-        %i(start_actor stop) & clazz.instance_methods
+        require_methods = %i(start stop)
+        require_methods & clazz.instance_methods == require_methods
       end
     end
   end

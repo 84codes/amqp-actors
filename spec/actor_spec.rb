@@ -43,4 +43,16 @@ describe AmqpActors do
 
     proc { TypedTestActor.push(1) }.must_raise(ArgumentError)
   end
+
+  it 'A backend must implement :start and :stop' do
+    class TestBackend; end
+
+    proc do
+      class CustomBackendActor < AmqpActors::TestActor
+        backend TestBackend
+
+        act {}
+      end
+    end.must_raise(ArgumentError)
+  end
 end

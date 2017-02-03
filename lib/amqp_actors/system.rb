@@ -19,6 +19,7 @@ module AmqpActors
     def self.stop
       @running = false
       @actors.each(&:die)
+      @actors = Set.new
     end
 
     def self.running?
