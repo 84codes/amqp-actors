@@ -12,7 +12,7 @@ module AmqpActors
     end
 
     module ClassMethods
-      attr_reader :backend_instance, :inbox, :act_block, :running
+      attr_reader :backend_instance, :act_block, :running
 
       def inherited(subclass)
         System.add(subclass)
@@ -23,12 +23,12 @@ module AmqpActors
         @act_block = block
       end
 
-      def push(msg)
+      def push(msg, block: false)
         unless valid_types?(msg)
           raise ArgumentError, "Illegal message type, expected #{@message_type}"
         end
         raise NotConfigured, 'you must provide an act block' unless @act_block
-        @inbox&.push msg unless @inbox&.closed? && @running
+        @backend_instance&.push(msg, block: block) unless @backend_instance&.closed? && @running
       end
 
       # @TODO these should be private to the module
@@ -42,7 +42,7 @@ module AmqpActors
 
       def start_backend(default_backend)
         @backend_instance = (@backend || default_backend).new(self, &@backend_block)
-        @inbox = @backend_instance.start
+        @backend_instance.start
         @running = true
       end
 
@@ -59,13 +59,20 @@ module AmqpActors
       end
 
       def inbox_size
-        @inbox&.size
+        @backend_instance&.size
       end
 
       def die
-        @inbox&.close
         @backend_instance&.stop
         @running = false
+      end
+
+      def address
+        if @backend_instance.respond_to?(:name)
+          @backend_instance.name
+        else
+          to_s
+        end
       end
 
       def helpers(&block)

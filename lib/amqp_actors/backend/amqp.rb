@@ -1,4 +1,6 @@
 require 'bunny'
+require 'json'
+require 'zlib'
 
 module AmqpActors
   # rubocop:disable Style/TrivialAccessors
@@ -18,6 +20,7 @@ module AmqpActors
         raise NotConfigured, "Can't .push_to without configured amqp_[pub_]url" unless @pub_url
         unless @publisher
           conn = @connections[@pub_url] ||= AmqpQueues.client.new(@pub_url)
+          conn.start
           @publisher = Publisher.new(nil, conn, cfg)
         end
         @publisher.publish(rks, msg)
@@ -30,7 +33,6 @@ module AmqpActors
       @type = type
       @pub_url ||= self.class.pub_url
       @sub_url ||= self.class.sub_url
-      @content_type = :serialize
       self.class.connections ||= {}
       self.class.client ||= Bunny
       if @pub_url.nil? || @sub_url.nil?
@@ -68,6 +70,18 @@ module AmqpActors
       @content_type = content_type
     end
 
+    def closed?
+      @inbox.closed?
+    end
+
+    def push(msg, block: false)
+      @inbox.push_to(@inbox.name, msg)
+    end
+
+    def name
+      @inbox.name
+    end
+
     def start
       @pub_conn.start
       @sub_conn.start
@@ -78,9 +92,11 @@ module AmqpActors
         content_type: @content_type
       }
       @inbox = Channel.new(@pub_conn, @sub_conn, @type, cfg)
+      self
     end
 
     def stop
+      @inbox&.close
       AmqpQueues.connections.delete(@pub_url)&.stop
       AmqpQueues.connections.delete(@sub_url)&.stop
     end
@@ -102,12 +118,8 @@ module AmqpActors
       @subscriber.close
     end
 
-    def size
-      @subscriber.size
-    end
-
-    def push(msg)
-      @publisher.publish(@subscriber.to_s, msg)
+    def name
+      @subscriber.to_s
     end
 
     def push_to(rk, msg)
@@ -115,55 +127,12 @@ module AmqpActors
     end
   end
 
-  module ContentHandler
-    def self.content_handler(content_type)
-      case content_type
-      when :serialize
-        [Serialize, 'text/plain']
-      when :Json
-        [Json, 'application/json']
-      else
-        [Plain, 'text/plain']
-      end
-    end
-
-    class Plain
-      def self.encode(data)
-        data
-      end
-
-      def self.decode(data)
-        data
-      end
-    end
-
-    class Json
-      def self.encode(data)
-        data.to_json
-      end
-
-      def self.decode(data)
-        JSON.parse(data, symbolize_keys: true)
-      end
-    end
-
-    class Serialize
-      def self.encode(data)
-        Marshal.dump(data)
-      end
-
-      def self.decode(data)
-        Marshal.load(data)
-      end
-    end
-  end
-
   class Publisher
     def initialize(_type, conn, cfg)
       @conn = conn
       @chan = create_pub_channel
+      @cfg = cfg
       @exchange = @chan.topic(cfg[:exchange] || 'amq.topic', durable: true)
-      @encoder, @content_type = ContentHandler.content_handler(cfg[:content_type])
     end
 
     def create_pub_channel
@@ -177,10 +146,11 @@ module AmqpActors
         rks.each { |rk| publish(rk, msg) }
         return
       end
-      @exchange.publish @encoder.encode(msg), {
+      @content_handler = ContentHandler.resolve_content_handler(msg, @cfg[:content_type])
+      @exchange.publish @content_handler.encode(msg), {
         routing_key: rks,
         persistent: true,
-        content_type: @content_type,
+        content_type: @content_handler.encoding,
       }
       success = @chan.wait_for_confirms
       raise "[ERROR] error=publish reason=not-confirmed" unless success
@@ -206,7 +176,7 @@ module AmqpActors
       @qname = "AmqpActor::#{cfg[:queue_name] || snake_case(type.to_s)}"
       @exchange_type = cfg[:exchange] || 'amq.topic'
       @routing_keys = (cfg[:routing_keys] || []) << @qname
-      @encoder, @content_type = ContentHandler.content_handler(cfg[:content_type])
+      @cfg = cfg
     end
 
     def create_sub_channel
@@ -220,13 +190,16 @@ module AmqpActors
       x = @chan.topic(@exchange_type, durable: true)
       @q = @chan.queue @qname, durable: true
       @routing_keys.each { |rk| @q.bind(x, routing_key: rk) }
-      @q.subscribe(manual_ack: true, block: false, exclusive: true) do |delivery, _headers, body|
+      @q.subscribe(manual_ack: true, block: false, exclusive: true) do |delivery, headers, body|
         begin
-          msg = @encoder.decode(body)
+          raw_data = decode(headers.content_encoding, body)
+          content_handler = ContentHandler
+            .resolve_content_handler(raw_data, @cfg[:content_type] || headers.content_type)
+          msg = content_handler.decode(raw_data)
           @type.new.push msg
           @chan.acknowledge(delivery.delivery_tag, false)
         rescue => e
-          print "[ERROR] #{e.message}\n #{e.backtrace.join("\n ")}\n"
+          print "[ERROR] #{e.inspect} #{e.message}\n #{e.backtrace.join("\n ")}\n"
           sleep 1
           @chan.reject(delivery.delivery_tag, true)
         end
@@ -263,5 +236,105 @@ module AmqpActors
         .tr("-", "_")
         .downcase
     end
+
+    def decode(content_encoding, body)
+      case content_encoding
+      when 'gzip'
+        StringIO.open(body) do |io|
+          gz = Zlib::GzipReader.new(io)
+          begin
+            return gz.read
+          ensure
+            gz.close
+          end
+        end
+      else
+        body
+      end
+    end
+  end
+
+  module ContentHandler
+    @@content_types = []
+
+    def self.register(content_type)
+      @@content_types << content_type
+    end
+
+    def self.content_handler(content_type_sym)
+      content_type = @@content_types.find { |ct| ct.name.end_with? content_type_sym.to_s }
+      raise NotConfigured, "Unknown content_type=#{content_type}. register?" unless content_type
+      content_type
+    end
+
+    def self.resolve_content_handler(msg, content_type)
+      if content_type.is_a?(Symbol)
+        content_handler(content_type)
+      elsif content_type.is_a?(String)
+        @@content_types.find { |ct| ct.encoding == content_type }
+      else
+        @@content_types.find { |ct| ct.can_handle?(msg) }
+      end
+    end
+
+    class ContentType
+      class << self
+        def can_handle?(data)
+          decode(encode(data)) && true
+        rescue
+          false
+        end
+
+        def name
+          to_s.downcase
+        end
+      end
+    end
+
+    class Plain < ContentType
+      def self.encoding
+        'text/plain'
+      end
+
+      def self.encode(data)
+        data
+      end
+
+      def self.decode(data)
+        data
+      end
+    end
+
+    class Json < ContentType
+      def self.encoding
+        'application/json'
+      end
+
+      def self.encode(data)
+        data.to_json
+      end
+
+      def self.decode(data)
+        JSON.parse(data, symbolize_names: true)
+      end
+    end
+
+    class Serialize < ContentType
+      def self.encoding
+        'text/plain'
+      end
+
+      def self.encode(data)
+        Marshal.dump(data)
+      end
+
+      def self.decode(data)
+        Marshal.load(data)
+      end
+    end
+
+    register(Json)
+    register(Serialize)
+    register(Plain)
   end
 end

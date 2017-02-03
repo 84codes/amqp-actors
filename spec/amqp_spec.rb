@@ -33,11 +33,10 @@ describe AmqpActors::AmqpQueues do
   end
 
   describe :content_handler do
-    puts "this block"
-    it 'should handle :serilize' do
+    it 'should handle :serialize' do
       class SerializeActor < AmqpActors::TestActor
         backend AmqpActors::AmqpQueues do
-          content_type :serilize
+          content_type :serialize
         end
 
         act do |msg|
@@ -91,8 +90,12 @@ describe AmqpActors::AmqpQueues do
   end
 
   it 'should pust_to rks' do
-    class PushToActor < AmqpActors::TestActor; end
-    AmqpActors::AmqpQueues.push_to(PushToActor.inbox.to_s, 1)
-    PushToActor.push(1)
+    class PushToActor < AmqpActors::TestActor
+      act do |msg|
+        output msg
+      end
+    end
+    AmqpActors::AmqpQueues.push_to(PushToActor.address, 1)
+    PushToActor.output
   end
 end

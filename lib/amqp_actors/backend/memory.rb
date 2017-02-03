@@ -12,7 +12,7 @@ module AmqpActors
           loop do
             break unless System.running? && @type.running
             begin
-              msg = @type.inbox.pop
+              msg = @inbox.pop
               @type.new.push(msg) unless msg.nil?
             rescue => e
               print "[ERROR] #{e.message} \n #{e.backtrace.join("\n ")}\n"
@@ -21,11 +21,24 @@ module AmqpActors
         end
       end
       @inbox = Queue.new
+      self
+    end
+
+    def push(msg, block: false)
+      @inbox.push(msg)
+    end
+
+    def size
+      @inbox.size
     end
 
     def stop
       @inbox.close
       @threads.each(&:kill)
+    end
+
+    def closed?
+      @inbox.closed?
     end
 
     def running_threads
