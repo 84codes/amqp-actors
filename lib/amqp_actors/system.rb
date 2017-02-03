@@ -27,10 +27,6 @@ module AmqpActors
       @running
     end
 
-    def self.configure(&blk)
-      instance_eval(&blk)
-    end
-
     def self.add(actor)
       @actors.add(actor)
       actor.start_backend(@default_backend) if @running
