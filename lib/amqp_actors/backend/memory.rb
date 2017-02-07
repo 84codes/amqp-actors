@@ -5,7 +5,6 @@ module AmqpActors
       @type = type
     end
 
-    # @TODO remove dead threads from the array periodically
     def start
       @threads = Array.new(@type.thread_count) do
         Thread.new do
@@ -24,7 +23,7 @@ module AmqpActors
       self
     end
 
-    def push(msg, block: false)
+    def push(msg)
       @inbox.push(msg)
     end
 

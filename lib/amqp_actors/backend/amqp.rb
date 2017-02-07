@@ -74,7 +74,7 @@ module AmqpActors
       @inbox.closed?
     end
 
-    def push(msg, block: false)
+    def push(msg)
       @inbox.push_to(@inbox.name, msg)
     end
 
@@ -146,11 +146,11 @@ module AmqpActors
         rks.each { |rk| publish(rk, msg) }
         return
       end
-      @content_handler = ContentHandler.resolve_content_handler(msg, @cfg[:content_type])
-      @exchange.publish @content_handler.encode(msg), {
+      content_handler = ContentHandler.resolve_content_handler(msg, @cfg[:content_type])
+      @exchange.publish content_handler.encode(msg), {
         routing_key: rks,
         persistent: true,
-        content_type: @content_handler.encoding,
+        content_type: content_handler.encoding,
       }
       success = @chan.wait_for_confirms
       raise "[ERROR] error=publish reason=not-confirmed" unless success
@@ -175,7 +175,6 @@ module AmqpActors
       @type = type
       @qname = "AmqpActor::#{cfg[:queue_name] || snake_case(type.to_s)}"
       @exchange_type = cfg[:exchange] || 'amq.topic'
-      @routing_keys = (cfg[:routing_keys] || []) << @qname
       @cfg = cfg
     end
 
@@ -185,18 +184,21 @@ module AmqpActors
       ch
     end
 
-    def subscribe
-      @chan = create_sub_channel
+    def subscribe(qname = nil)
+      @chan ||= create_sub_channel
+      qname ||= @qname
       x = @chan.topic(@exchange_type, durable: true)
-      @q = @chan.queue @qname, durable: true
-      @routing_keys.each { |rk| @q.bind(x, routing_key: rk) }
+      @q = @chan.queue qname, durable: true
+      routing_keys = (@cfg[:routing_keys] || []) << qname
+      routing_keys.each { |rk| @q.bind(x, routing_key: rk) }
       @q.subscribe(manual_ack: true, block: false, exclusive: true) do |delivery, headers, body|
         begin
-          raw_data = decode(headers.content_encoding, body)
-          content_handler = ContentHandler
-            .resolve_content_handler(raw_data, @cfg[:content_type] || headers.content_type)
-          msg = content_handler.decode(raw_data)
-          @type.new.push msg
+          data = parse(body, headers)
+          if block_given?
+            yield delivery, headers, data
+          else
+            @type.new.push(parse(body, headers))
+          end
           @chan.acknowledge(delivery.delivery_tag, false)
         rescue => e
           print "[ERROR] #{e.inspect} #{e.message}\n #{e.backtrace.join("\n ")}\n"
@@ -251,6 +253,13 @@ module AmqpActors
       else
         body
       end
+    end
+
+    def parse(body, headers)
+      raw_data = decode(headers.content_encoding, body)
+      content_handler = ContentHandler
+        .resolve_content_handler(raw_data, @cfg[:content_type] || headers.content_type)
+      content_handler.decode(raw_data)
     end
   end
 

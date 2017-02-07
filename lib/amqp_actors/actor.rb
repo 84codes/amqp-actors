@@ -5,7 +5,6 @@ module AmqpActors
         self.class.die
       end
 
-      # @TODO these methods should not be part of DSL
       def push(msg)
         instance_exec(msg, &self.class.act_block)
       end
@@ -23,15 +22,14 @@ module AmqpActors
         @act_block = block
       end
 
-      def push(msg, block: false)
+      def push(msg)
         unless valid_types?(msg)
           raise ArgumentError, "Illegal message type, expected #{@message_type}"
         end
         raise NotConfigured, 'you must provide an act block' unless @act_block
-        @backend_instance&.push(msg, block: block) unless @backend_instance&.closed? && @running
+        @backend_instance&.push(msg) unless @backend_instance&.closed? && @running
       end
 
-      # @TODO these should be private to the module
       def backend(clazz, &blk)
         raise ArgumentError, "Backend must implement :start and :stop" unless valid_backend? clazz
         @backend = clazz
@@ -79,7 +77,8 @@ module AmqpActors
         class_eval(&block) if block_given?
       end
 
-      # @TODO these methods should not be part of DSL
+      private
+
       def valid_types?(type)
         return true if @message_type.nil?
         if type.is_a?(Enumerable)
