@@ -70,6 +70,10 @@ module AmqpActors
       @content_type = content_type
     end
 
+    def content_encoding(encoding)
+      @content_encoding = encoding
+    end
+
     def closed?
       @inbox.closed?
     end
@@ -89,7 +93,8 @@ module AmqpActors
         exchange: @exchange,
         routing_keys: @routing_keys,
         queue_name: @queue_name,
-        content_type: @content_type
+        content_type: @content_type,
+        content_encoding: @content_encoding
       }
       @inbox = Channel.new(@pub_conn, @sub_conn, @type, cfg)
       self
@@ -147,10 +152,11 @@ module AmqpActors
         return
       end
       content_handler = ContentHandler.resolve_content_handler(msg, @cfg[:content_type])
-      @exchange.publish content_handler.encode(msg), {
+      @exchange.publish encode(content_handler.encode(msg)), {
         routing_key: rks,
         persistent: true,
         content_type: content_handler.encoding,
+        content_encoding: @content_encoding
       }
       success = @chan.wait_for_confirms
       raise "[ERROR] error=publish reason=not-confirmed" unless success
@@ -165,6 +171,19 @@ module AmqpActors
 
     def closed?
       @conn.closed?
+    end
+
+    private
+
+    def encode(body)
+      case @cfg[:content_encoding].to_s
+      when 'gzip'
+        inflater = Zlib::Inflate.new
+        inflater.sync(body)
+        inflater.inflate(body)
+      else
+        body
+      end
     end
   end
 
@@ -240,7 +259,7 @@ module AmqpActors
     end
 
     def decode(content_encoding, body)
-      case content_encoding
+      case content_encoding.to_s
       when 'gzip'
         StringIO.open(body) do |io|
           gz = Zlib::GzipReader.new(io)
