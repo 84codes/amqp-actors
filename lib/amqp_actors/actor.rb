@@ -1,3 +1,5 @@
+require 'set'
+
 module AmqpActors
   module DSL
     module InstanceMethods
@@ -79,14 +81,14 @@ module AmqpActors
 
       private
 
-      def valid_types?(type)
+      def valid_types?(value)
         return true if @message_type.nil?
-        if type.is_a?(Enumerable)
+        if @message_type.is_a?(Hash) && value.respond_to?(:all?)
           key_value = @message_type.flatten
-          key_value.size == 2 && type.is_a?(key_value.first) &&
-            type.all? { |t| t.is_a?(key_value.last) }
+          key_value.size == 2 && value.is_a?(key_value.first) &&
+            value.all? { |t| t.is_a?(key_value.last) }
         else
-          a = type.is_a?(@message_type)
+          a = value.is_a?(@message_type)
           !a.nil? && a
         end
       rescue TypeError
