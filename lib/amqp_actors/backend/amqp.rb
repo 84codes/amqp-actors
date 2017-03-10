@@ -12,7 +12,8 @@ module AmqpActors
       def configure(cfg)
         @pub_url = cfg[:amqp_pub_url] || cfg[:amqp_url]
         @sub_url = cfg[:amqp_sub_url] || cfg[:amqp_url]
-        @client = cfg[:client]
+        @client = cfg[:client] || Bunny
+        @connections ||= {}
         self
       end
 

@@ -16,7 +16,7 @@ describe AmqpActors do
       end
     end
 
-    expected = 'test'
+    expected = 'test\nsad'
     MessageActor.push(expected)
     MessageActor.output.must_equal(expected)
   end
