@@ -3,6 +3,7 @@ module AmqpActors
     def initialize(type, &_blk)
       @threads = []
       @type = type
+      @inbox = Queue.new
     end
 
     def start
@@ -19,7 +20,6 @@ module AmqpActors
           end
         end
       end
-      @inbox = Queue.new
       self
     end
 

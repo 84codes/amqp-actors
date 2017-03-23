@@ -41,9 +41,9 @@ module AmqpActors
       end
 
       def start_backend(default_backend)
+        @running = true
         @backend_instance = (@backend || default_backend).new(self, &@backend_block)
         @backend_instance.start
-        @running = true
       end
 
       def message_type(type)
