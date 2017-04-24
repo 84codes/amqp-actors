@@ -37,7 +37,7 @@ module AmqpActors
         @backend = clazz
         @backend_block = blk
         @backend_instance&.stop
-        start_backend(@backend)
+        start_backend(@backend) if AmqpActors::System.running?
       end
 
       def start_backend(default_backend)
