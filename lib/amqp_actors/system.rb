@@ -9,9 +9,11 @@ module AmqpActors
   module System
     @actors = Set.new
     @running = false
+    @timeout = 60
 
     def self.start(cfg = {})
       @default_backend = cfg[:default_backend] || MemoryQueues
+      @timeout = cfg[:act_timeout] || @timeout
       @running = true
       @actors.each { |a| a.start_backend(@default_backend) }
     end
@@ -34,6 +36,10 @@ module AmqpActors
 
     def self.push(msg, type)
       @actors.select { |a| a.is_a?(type) }.each { |a| a.push(msg) }
+    end
+
+    def self.timeout
+      @timeout
     end
   end
 end

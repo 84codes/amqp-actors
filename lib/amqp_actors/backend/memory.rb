@@ -13,7 +13,9 @@ module AmqpActors
             break unless System.running? && @type.running
             begin
               msg = @inbox.pop
-              @type.new.push(msg) unless msg.nil?
+              Timeout.timeout AmqpActors::System.timeout do
+                @type.new.push(msg) unless msg.nil?
+              end
             rescue => e
               print "[ERROR] #{e.message} \n #{e.backtrace.join("\n ")}\n"
             end

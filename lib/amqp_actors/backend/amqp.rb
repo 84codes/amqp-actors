@@ -14,6 +14,7 @@ module AmqpActors
         @sub_url = cfg[:amqp_sub_url] || cfg[:amqp_url]
         @client = cfg[:client] || Bunny
         @connections ||= {}
+        @content_type = cfg[:content_type]
         self
       end
 
@@ -215,7 +216,9 @@ module AmqpActors
         begin
           data = parse(body, headers)
           if block_given?
-            yield delivery, headers, data
+            Timeout.timeout AmqpActors::System.timeout do
+              yield delivery, headers, data
+            end
           else
             @type.new.push(parse(body, headers))
           end
