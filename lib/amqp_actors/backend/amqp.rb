@@ -6,8 +6,8 @@ module AmqpActors
   # rubocop:disable Style/TrivialAccessors
   class AmqpQueues
     class << self
-      attr_accessor :connections
-      attr_reader :pub_url, :sub_url, :client
+      attr_accessor :connections, :client
+      attr_reader :pub_url, :sub_url
 
       def configure(cfg)
         @pub_url = cfg[:amqp_pub_url] || cfg[:amqp_url]
@@ -209,7 +209,7 @@ module AmqpActors
       @chan ||= create_sub_channel
       qname ||= @qname
       x = @chan.topic(@exchange_type, durable: true)
-      @q = @chan.queue qname, durable: true
+      @q = @chan.queue qname, durable: true, auto_delete: qname.nil?
       routing_keys = (@cfg[:routing_keys] || []) << qname
       routing_keys.each { |rk| @q.bind(x, routing_key: rk) }
       @q.subscribe(manual_ack: true, block: false, exclusive: true) do |delivery, headers, body|
