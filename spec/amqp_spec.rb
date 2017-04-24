@@ -2,9 +2,8 @@ require_relative 'spec_helper'
 
 describe AmqpActors::AmqpQueues do
   before do
-    AmqpActors::System.start(
-      default_backend: AmqpActors::AmqpQueues.configure(client: BunnyMock, amqp_url: '')
-    )
+    AmqpActors::AmqpQueues.configure(client: BunnyMock, amqp_url: '')
+    AmqpActors::System.start(default_backend: AmqpActors::AmqpQueues)
   end
 
   after do

@@ -6,22 +6,18 @@ module AmqpActors
   # rubocop:disable Style/TrivialAccessors
   class AmqpQueues
     class << self
-      attr_accessor :connections, :client
-      attr_reader :pub_url, :sub_url
-
       def configure(cfg)
-        @pub_url = cfg[:amqp_pub_url] || cfg[:amqp_url]
-        @sub_url = cfg[:amqp_sub_url] || cfg[:amqp_url]
-        @client = cfg[:client] || Bunny
-        @connections ||= {}
-        @content_type = cfg[:content_type]
-        self
+        @@pub_url = cfg[:amqp_pub_url] || cfg[:amqp_url]
+        @@sub_url = cfg[:amqp_sub_url] || cfg[:amqp_url]
+        @@client = cfg[:client] || Bunny
+        @@connections ||= {}
+        @@content_type = cfg[:content_type]
       end
 
       def push_to(rks, msg, cfg = {})
-        raise NotConfigured, "Can't .push_to without configured amqp_[pub_]url" unless @pub_url
+        raise NotConfigured, "Can't .push_to without configured amqp_[pub_]url" unless @@pub_url
         unless @publisher
-          conn = @connections[@pub_url] ||= AmqpQueues.client.new(@pub_url)
+          conn = @@connections[@@pub_url] ||= @@client.new(@@pub_url)
           conn.start
           @publisher = Publisher.new(nil, conn, cfg)
         end
@@ -31,17 +27,19 @@ module AmqpActors
 
     # Instance methods
     def initialize(type, &blk)
-      instance_eval(&blk) if block_given?
       @type = type
-      @pub_url ||= self.class.pub_url
-      @sub_url ||= self.class.sub_url
-      self.class.connections ||= {}
-      self.class.client ||= Bunny
+      @pub_url = @@pub_url
+      @sub_url = @@sub_url
+      @client = @@client || Bunny
+      @content_type = @@content_type
+
+      instance_eval(&blk) if block_given?
+
       if @pub_url.nil? || @sub_url.nil?
         raise NotConfigured, 'use AmqpQueues.configure or AmqpActor#backend to provide a amqp url'
       end
-      @pub_conn = AmqpQueues.connections[@pub_url] ||= AmqpQueues.client.new(@pub_url)
-      @sub_conn = AmqpQueues.connections[@sub_url] ||= AmqpQueues.client.new(@sub_url)
+      @pub_conn = @@connections[@pub_url] ||= @client.new(@pub_url)
+      @sub_conn = @@connections[@sub_url] ||= @client.new(@sub_url)
     end
 
     def amqp_url(url)
@@ -104,8 +102,8 @@ module AmqpActors
 
     def stop
       @inbox&.close
-      AmqpQueues.connections.delete(@pub_url)&.stop
-      AmqpQueues.connections.delete(@sub_url)&.stop
+      @@connections.delete(@pub_url)&.stop
+      @@connections.delete(@sub_url)&.stop
     end
   end
 
@@ -209,7 +207,8 @@ module AmqpActors
       @chan ||= create_sub_channel
       qname ||= @qname
       x = @chan.topic(@exchange_type, durable: true)
-      @q = @chan.queue qname, durable: true, auto_delete: qname.nil?
+      ad = qname.nil?
+      @q = @chan.queue qname, durable: ad, auto_delete: ad
       routing_keys = (@cfg[:routing_keys] || []) << qname
       routing_keys.each { |rk| @q.bind(x, routing_key: rk) }
       @q.subscribe(manual_ack: true, block: false, exclusive: true) do |delivery, headers, body|
