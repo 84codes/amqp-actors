@@ -3,7 +3,7 @@
 AllCops:
   TargetRubyVersion: 2.3
   Exclude:
-    - '**/*.haml'
+    - "**/*.haml"
 
 Lint/AssignmentInCondition:
   Enabled: false
@@ -16,9 +16,9 @@ Lint/UnusedMethodArgument:
 
 Metrics/BlockLength:
   Exclude:
-    - 'Rakefile'
-    - '**/*.rake'
-    - 'spec/**/*.rb'
+    - "Rakefile"
+    - "**/*.rake"
+    - "spec/**/*.rb"
 
 Metrics/ClassLength:
   Max: 100
@@ -46,7 +46,7 @@ Style/AsciiComments:
 Style/ClassAndModuleChildren:
   EnforcedStyle: nested
 
-Style/AlignParameters:
+Layout/AlignParameters:
   Enabled: true
 
 Style/AndOr:
@@ -61,16 +61,13 @@ Style/ClassVars:
 Style/Documentation:
   Enabled: false
 
-Style/DotPosition:
+Layout/DotPosition:
   Enabled: false
 
-Style/EmptyLinesAroundAccessModifier:
+Layout/EmptyLinesAroundAccessModifier:
   Enabled: true
 
-Style/IndentHash:
-  Enabled: true
-
-Style/LeadingCommentSpace:
+Layout/LeadingCommentSpace:
   Enabled: true
 
 Style/RedundantReturn:
@@ -79,16 +76,19 @@ Style/RedundantReturn:
 Style/SignalException:
   Enabled: true
 
-Style/SpaceBeforeFirstArg:
+Layout/SpaceBeforeFirstArg:
   Enabled: true
 
 Style/StringLiterals:
   Enabled: false
 
-Style/TrailingBlankLines:
+Layout/TrailingBlankLines:
   Enabled: true
 
-Style/TrailingCommaInLiteral:
+Style/TrailingCommaInArrayLiteral:
+  Enabled: false
+
+Style/TrailingCommaInHashLiteral:
   Enabled: false
 
 Style/TrailingCommaInArguments:
@@ -97,7 +97,7 @@ Style/TrailingCommaInArguments:
 Style/FrozenStringLiteralComment:
   Enabled: false
 
-Style/MultilineMethodCallIndentation:
+Layout/MultilineMethodCallIndentation:
   EnforcedStyle: indented
 
 # Performance rules
