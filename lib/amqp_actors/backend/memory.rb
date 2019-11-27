@@ -11,13 +11,14 @@ module AmqpActors
         Thread.new do
           loop do
             break unless System.running? && @type.running
+
             begin
               msg = @inbox.pop
               Timeout.timeout AmqpActors::System.timeout do
                 @type.new.push(msg) unless msg.nil?
               end
-            rescue => e
-              print "[ERROR] #{e.message} \n #{e.backtrace.join("\n ")}\n"
+            rescue StandardError => e
+              print "[ERROR] #{e.inspect} \n #{e.backtrace.join("\n ")}\n"
             end
           end
         end
