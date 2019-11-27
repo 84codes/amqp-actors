@@ -21,6 +21,7 @@ module AmqpActors
 
       def act(&block)
         raise ArgumentError, 'act must recieve a block' unless block_given?
+
         @act_block = block
       end
 
@@ -29,11 +30,13 @@ module AmqpActors
           raise ArgumentError, "Illegal message type, expected #{@message_type}"
         end
         raise NotConfigured, 'you must provide an act block' unless @act_block
+
         @backend_instance&.push(msg) unless @backend_instance&.closed? && @running
       end
 
       def backend(clazz, &blk)
         raise ArgumentError, "Backend must implement :start and :stop" unless valid_backend? clazz
+
         @backend = clazz
         @backend_block = blk
         @backend_instance&.stop
@@ -83,6 +86,7 @@ module AmqpActors
 
       def valid_types?(value)
         return true if @message_type.nil?
+
         if @message_type.is_a?(Hash) && value.respond_to?(:all?)
           key_value = @message_type.flatten
           key_value.size == 2 && value.is_a?(key_value.first) &&
@@ -96,7 +100,7 @@ module AmqpActors
       end
 
       def valid_backend?(clazz)
-        require_methods = %i(start stop)
+        require_methods = %i[start stop]
         require_methods & clazz.instance_methods == require_methods
       end
     end

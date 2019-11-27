@@ -21,7 +21,6 @@ module AmqpActors
     def self.stop
       @running = false
       @actors.each(&:die)
-      @default_backend.stop if @default_backend
       @default_backend = nil
       @actors = Set.new
     end

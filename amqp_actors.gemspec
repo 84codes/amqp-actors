@@ -1,5 +1,4 @@
-# coding: utf-8
-lib = File.expand_path('../lib', __FILE__)
+lib = File.expand_path('lib', __dir__)
 $LOAD_PATH.unshift(lib) unless $LOAD_PATH.include?(lib)
 require 'amqp_actors/version'
 
@@ -24,13 +23,13 @@ Gem::Specification.new do |spec|
     .reject { |f| f.match(%r{^(test|spec|features)/}) }
   spec.bindir        = "bin"
   spec.executables   = spec.files.grep(%r{^bin/}) { |f| File.basename(f) }
-  spec.require_paths = %w(lib)
+  spec.require_paths = %w[lib]
 
   spec.add_runtime_dependency "bunny"
 
   spec.add_development_dependency "bundler"
-  spec.add_development_dependency "rake"
   spec.add_development_dependency "bunny-mock"
   spec.add_development_dependency "minitest"
   spec.add_development_dependency "minitest-reporters"
+  spec.add_development_dependency "rake"
 end

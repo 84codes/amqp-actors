@@ -7,30 +7,28 @@ PATH
 GEM
   remote: https://rubygems.org/
   specs:
-    amq-protocol (2.1.0)
+    amq-protocol (2.3.0)
     ansi (1.5.0)
     builder (3.2.3)
-    bunny (2.6.3)
-      amq-protocol (>= 2.0.1)
-    bunny-mock (1.5.0)
+    bunny (2.14.3)
+      amq-protocol (~> 2.3, >= 2.3.0)
+    bunny-mock (1.7.0)
       bunny (>= 1.7)
-    codeclimate-test-reporter (1.0.5)
-      simplecov
     docile (1.1.5)
-    json (2.0.3)
-    minitest (5.10.1)
-    minitest-reporters (1.1.14)
+    json (2.2.0)
+    minitest (5.13.0)
+    minitest-reporters (1.4.2)
       ansi
       builder
       minitest (>= 5.0)
       ruby-progressbar
-    rake (12.0.0)
-    ruby-progressbar (1.8.1)
+    rake (13.0.1)
+    ruby-progressbar (1.10.1)
     simplecov (0.13.0)
       docile (~> 1.1.0)
       json (>= 1.8, < 3)
       simplecov-html (~> 0.10.0)
-    simplecov-html (0.10.0)
+    simplecov-html (0.10.2)
 
 PLATFORMS
   ruby
@@ -39,11 +37,10 @@ DEPENDENCIES
   amqp_actors!
   bundler
   bunny-mock
-  codeclimate-test-reporter (~> 1.0.0)
   minitest
   minitest-reporters
   rake
   simplecov
 
 BUNDLED WITH
-   1.13.7
+   1.17.3

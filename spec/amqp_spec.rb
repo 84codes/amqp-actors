@@ -28,7 +28,7 @@ describe AmqpActors::AmqpQueues do
 
     expected = 'test'
     AmqpActor.push(expected)
-    AmqpActor.output.must_equal(expected)
+    expect(AmqpActor.output).must_equal(expected)
   end
 
   describe :content_handler do
@@ -45,7 +45,7 @@ describe AmqpActors::AmqpQueues do
 
       expected = OpenStruct.new(a: 'a')
       SerializeActor.push(expected)
-      SerializeActor.output.must_equal(expected)
+      expect(SerializeActor.output).must_equal(expected)
     end
 
     it 'should handle :json' do
@@ -61,7 +61,7 @@ describe AmqpActors::AmqpQueues do
 
       expected = { a: 'a' }
       JsonActor.push(expected)
-      JsonActor.output.must_equal(expected)
+      expect(JsonActor.output).must_equal(expected)
     end
 
     it 'should handle :plain' do
@@ -77,7 +77,7 @@ describe AmqpActors::AmqpQueues do
 
       expected = 'expected'
       PlainActor.push(expected)
-      PlainActor.output.must_equal(expected)
+      expect(PlainActor.output).must_equal(expected)
     end
   end
 
@@ -85,7 +85,7 @@ describe AmqpActors::AmqpQueues do
     class NotConfiguredActor < AmqpActors::Actor
       backend AmqpActors::AmqpQueues
     end
-    proc { NotConfiguredActor.push(1) }.must_raise(AmqpActors::NotConfigured)
+    expect(proc { NotConfiguredActor.push(1) }).must_raise(AmqpActors::NotConfigured)
   end
 
   it 'should pust_to rks' do

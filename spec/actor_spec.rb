@@ -18,7 +18,7 @@ describe AmqpActors do
 
     expected = 'test\nsad'
     MessageActor.push(expected)
-    MessageActor.output.must_equal(expected)
+    expect(MessageActor.output).must_equal(expected)
   end
 
   it 'should die' do
@@ -32,7 +32,7 @@ describe AmqpActors do
     DieActor.push(1)
     DieActor.output
 
-    DieActor.backend_instance.running_threads.must_equal(0)
+    expect(DieActor.backend_instance.running_threads).must_equal(0)
   end
 
   it 'should raise for wrong message type' do
@@ -41,19 +41,19 @@ describe AmqpActors do
       act {}
     end
 
-    proc { TypedTestActor.push(1) }.must_raise(ArgumentError)
+    expect(proc { TypedTestActor.push(1) }).must_raise(ArgumentError)
   end
 
   it 'A backend must implement :start and :stop' do
     class TestBackend; end
 
-    proc do
+    expect(proc do
       class CustomBackendActor < AmqpActors::TestActor
         backend TestBackend
 
         act {}
       end
-    end.must_raise(ArgumentError)
+    end).must_raise(ArgumentError)
   end
 
   it 'should get and set thread_count' do
@@ -65,7 +65,7 @@ describe AmqpActors do
     end
 
     ThreadCountActor.push('whatever')
-    ThreadCountActor.output.must_equal(2)
+    expect(ThreadCountActor.output).must_equal(2)
   end
 
   it 'should be able to use helpers' do
@@ -81,7 +81,7 @@ describe AmqpActors do
     end
 
     HelpersActor.push(1)
-    HelpersActor.output.must_equal(2)
+    expect(HelpersActor.output).must_equal(2)
   end
 
   it 'should handle collections message type' do
@@ -93,8 +93,8 @@ describe AmqpActors do
     end
 
     CollectionsActor.push(["1"])
-    CollectionsActor.output.must_equal(["1"])
-    proc { CollectionsActor.push("hej") }.must_raise(ArgumentError)
+    expect(CollectionsActor.output).must_equal(["1"])
+    expect(proc { CollectionsActor.push("hej") }).must_raise(ArgumentError)
   end
 
   it 'should return inbox size' do
@@ -104,10 +104,10 @@ describe AmqpActors do
       end
     end
 
-    ImboxSizeActor.inbox_size.must_equal 0
+    expect(ImboxSizeActor.inbox_size).must_equal 0
     ImboxSizeActor.push(1)
-    ImboxSizeActor.inbox_size.must_equal 1
+    expect(ImboxSizeActor.inbox_size).must_equal 1
     ImboxSizeActor.output
-    ImboxSizeActor.inbox_size.must_equal 0
+    expect(ImboxSizeActor.inbox_size).must_equal 0
   end
 end

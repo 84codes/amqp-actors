@@ -16,6 +16,7 @@ module AmqpActors
 
       def push_to(rks, msg, cfg = {})
         raise NotConfigured, "Can't .push_to without configured amqp_[pub_]url" unless @@pub_url
+
         unless @publisher
           conn = @@connections[@@pub_url] ||= @@client.new(@@pub_url)
           conn.start
@@ -30,7 +31,7 @@ module AmqpActors
       @type = type
       @pub_url = @@pub_url
       @sub_url = @@sub_url
-      @client = @@client || Bunny
+      @client = @@client ||  Bunny
       @content_type = @@content_type
 
       instance_eval(&blk) if block_given?
@@ -38,6 +39,7 @@ module AmqpActors
       if @pub_url.nil? || @sub_url.nil?
         raise NotConfigured, 'use AmqpQueues.configure or AmqpActor#backend to provide a amqp url'
       end
+
       @pub_conn = @@connections[@pub_url] ||= @client.new(@pub_url)
       @sub_conn = @@connections[@sub_url] ||= @client.new(@sub_url)
     end
@@ -222,7 +224,7 @@ module AmqpActors
             @type.new.push(parse(body, headers))
           end
           @chan.acknowledge(delivery.delivery_tag, false)
-        rescue => e
+        rescue StandardError => e
           print "[ERROR] #{e.inspect} #{e.message}\n #{e.backtrace.join("\n ")}\n"
           sleep 1
           @chan.reject(delivery.delivery_tag, true)
@@ -295,6 +297,7 @@ module AmqpActors
     def self.content_handler(content_type_sym)
       content_type = @@content_types.find { |ct| ct.name.end_with? content_type_sym.to_s }
       raise NotConfigured, "Unknown content_type=#{content_type}. register?" unless content_type
+
       content_type
     end
 
@@ -312,7 +315,7 @@ module AmqpActors
       class << self
         def can_handle?(data)
           decode(encode(data)) && true
-        rescue
+        rescue StandardError
           false
         end
 
