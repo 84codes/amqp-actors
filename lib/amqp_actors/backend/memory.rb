@@ -18,7 +18,7 @@ module AmqpActors
                 @type.new.push(msg) unless msg.nil?
               end
             rescue StandardError => e
-              print "[ERROR] #{e.inspect} \n #{e.backtrace.join("\n ")}\n"
+              print "[ERROR] MemoryQueues #{e.inspect} \n #{e.backtrace.join("\n ")}\n"
             end
           end
         end
@@ -27,7 +27,7 @@ module AmqpActors
     end
 
     def push(msg)
-      @inbox.push(msg)
+      @inbox.push(msg) unless closed?
     end
 
     def size
