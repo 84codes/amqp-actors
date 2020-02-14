@@ -46,7 +46,7 @@ Style/AsciiComments:
 Style/ClassAndModuleChildren:
   EnforcedStyle: nested
 
-Layout/AlignParameters:
+Layout/ParameterAlignment:
   Enabled: true
 
 Style/AndOr:
@@ -82,7 +82,7 @@ Layout/SpaceBeforeFirstArg:
 Style/StringLiterals:
   Enabled: false
 
-Layout/TrailingBlankLines:
+Layout/TrailingEmptyLines:
   Enabled: true
 
 Style/TrailingCommaInArrayLiteral:
