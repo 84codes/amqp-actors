@@ -99,7 +99,3 @@ Style/FrozenStringLiteralComment:
 
 Layout/MultilineMethodCallIndentation:
   EnforcedStyle: indented
-
-# Performance rules
-Performance/RedundantMerge:
-  Enabled: false
