@@ -15,7 +15,7 @@ GEM
     bunny-mock (1.7.0)
       bunny (>= 1.7)
     docile (1.1.5)
-    json (2.2.0)
+    json (2.3.0)
     minitest (5.13.0)
     minitest-reporters (1.4.2)
       ansi
