@@ -52,9 +52,6 @@ Layout/ParameterAlignment:
 Style/AndOr:
   Enabled: false
 
-Style/BracesAroundHashParameters:
-  Enabled: false
-
 Style/ClassVars:
   Enabled: false
 
