@@ -161,9 +161,9 @@ module AmqpActors
         content_encoding: @content_encoding
       }
       success = @chan.wait_for_confirms
-      raise "[ERROR] error=publish reason=not-confirmed" unless success
+      raise "at=error error=publish reason=not-confirmed" unless success
     rescue Timeout::Error
-      puts "[WARN] publish to #{rks} timed out, retrying"
+      puts "at=warn publish to #{rks} timed out, retrying"
       retry
     end
 
@@ -225,7 +225,7 @@ module AmqpActors
           end
           @chan.acknowledge(delivery.delivery_tag, false)
         rescue StandardError => e
-          puts "[ERROR] #{e.inspect} #{e.message}\n #{e.backtrace.join("\n ")}"
+          puts "at=error #{e.inspect} #{e.message}\n #{e.backtrace.join("\n ")}"
           sleep 1
           @chan.reject(delivery.delivery_tag, true)
         end
