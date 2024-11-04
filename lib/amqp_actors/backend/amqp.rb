@@ -163,7 +163,7 @@ module AmqpActors
       success = @chan.wait_for_confirms
       raise "[ERROR] error=publish reason=not-confirmed" unless success
     rescue Timeout::Error
-      print "[WARN] publish to #{rks} timed out, retrying\n"
+      puts "[WARN] publish to #{rks} timed out, retrying"
       retry
     end
 
@@ -225,13 +225,13 @@ module AmqpActors
           end
           @chan.acknowledge(delivery.delivery_tag, false)
         rescue StandardError => e
-          print "[ERROR] #{e.inspect} #{e.message}\n #{e.backtrace.join("\n ")}\n"
+          puts "[ERROR] #{e.inspect} #{e.message}\n #{e.backtrace.join("\n ")}"
           sleep 1
           @chan.reject(delivery.delivery_tag, true)
         end
       end
     rescue Bunny::AccessRefused => e
-      print "#{e.inspect} retrying in 3\n"
+      puts "#{e.inspect} retrying in 3"
       sleep 3
       @chan&.close
       retry
