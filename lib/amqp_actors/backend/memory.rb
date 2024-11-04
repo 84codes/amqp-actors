@@ -18,7 +18,7 @@ module AmqpActors
                 @type.new.push(msg) unless msg.nil?
               end
             rescue StandardError => e
-              puts "[WARN] MemoryQueues #{e.inspect} \n #{e.backtrace.join("\n ")}"
+              puts "at=warn MemoryQueues #{e.inspect} \n #{e.backtrace.join("\n ")}"
             end
           end
         end
