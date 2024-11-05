@@ -3,7 +3,6 @@ require 'json'
 require 'zlib'
 
 module AmqpActors
-  # rubocop:disable Style/TrivialAccessors
   class AmqpQueues
     class << self
       def configure(cfg)
